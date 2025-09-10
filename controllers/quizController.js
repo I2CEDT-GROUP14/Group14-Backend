@@ -48,7 +48,7 @@ export const generateQuiz = async (req, res) => {
 
     const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English. Also, provide tags for the quiz, at least 1 tag must be the question's subject name, e.g. Math, Computer Programming, Algorithms, etc. Maximum 3 tags.`;
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent', {
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
         method: 'POST',
         headers: {
             contentType: 'application/json',
@@ -67,12 +67,27 @@ export const generateQuiz = async (req, res) => {
                     items: {
                         type: "OBJECT",
                         properties: {
-                            question: { type: "string" },
-                            options: { type: "Array", items: { type: "string" } },
-                            answer: { type: "string" },
-                            tags: { type: "Array", items: { type: "string" } }
+                            questions: {
+                                type: "Array",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        question: { type: "string" },
+                                        options: { type: "Array", items: { type: "string" } },
+                                        answer: { type: "string" },
+                                    },
+                                    required: ["question", "options", "answer"],
+                                    propertyOrdering: ["question", "options", "answer"]
+                                }
+                            },
+                            tags: { type: "Array", items: { type: "string" } },
+                            // question: { type: "string" },
+                            // options: { type: "Array", items: { type: "string" } },
+                            // answer: { type: "string" },
+                            // tags: { type: "Array", items: { type: "string" } }
                         },
-                        propertyOrdering: ["question", "options", "answer"]
+                        required: ["questions", "tags"],
+                        propertyOrdering: ["questions", "tags"]
                     },
                 }
             }
@@ -85,15 +100,24 @@ export const generateQuiz = async (req, res) => {
     //escape quotes in message
     message = JSON.parse(message);
 
-    //save to database
-    // Assuming you have a Quiz model set up with Mongoose
+
     const newQuiz = new Quiz({
         title: topic,
-        numQuestions,
-        questions: message,
-        systemPrompt
+        questions: message.questions,
+        systemPrompt,
+        tags: message.tags
     });
+
     await newQuiz.save();
+    //save to database
+    // Assuming you have a Quiz model set up with Mongoose
+    // const newQuiz = new Quiz({
+    //     title: topic,
+    //     numQuestions,
+    //     questions: message,
+    //     systemPrompt
+    // });
+    // await newQuiz.save();
 
     res.status(200).json(message);
 }
