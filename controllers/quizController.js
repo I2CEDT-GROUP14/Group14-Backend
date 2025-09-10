@@ -46,7 +46,7 @@ export const generateQuiz = async (req, res) => {
         questiontypePrompt = "Combine multiple-choice and true/false questions.";
     }
 
-    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English.`;
+    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English. Also, provide tags for the quiz, at least 1 tag must be the question's subject name, e.g. Math, Computer Programming, Algorithms, etc. Maximum 3 tags.`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
         method: 'POST',
@@ -69,7 +69,8 @@ export const generateQuiz = async (req, res) => {
                         properties: {
                             question: { type: "string" },
                             options: { type: "Array", items: { type: "string" } },
-                            answer: { type: "string" }
+                            answer: { type: "string" },
+                            tags: { type: "Array", items: { type: "string" } }
                         },
                         propertyOrdering: ["question", "options", "answer"]
                     },
