@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import Quiz from '../models/quizModel.js';
 dotenv.config();
+// import '../db/db.js';
 
 export const getAllQuizzes = async (req, res) => {
     try {

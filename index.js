@@ -1,4 +1,4 @@
-import "./db/db.js" ;
+// import "./db/db.js" ;
 import { config } from "dotenv";
 
 config();

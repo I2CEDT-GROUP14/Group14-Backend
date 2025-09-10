@@ -4,6 +4,8 @@ import cors from "cors";
 import statusRoute from "./routes/statusRoute.js";
 import quizRoute from "./routes/quizRoute.js";
 
+import "./db/db.js";
+
 const app = express();
 
 app.use(express.json());
