@@ -48,7 +48,7 @@ export const generateQuiz = async (req, res) => {
 
     const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English. Also, provide tags for the quiz, at least 1 tag must be the question's subject name, e.g. Math, Computer Programming, Algorithms, etc. Maximum 3 tags.`;
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent', {
         method: 'POST',
         headers: {
             contentType: 'application/json',
