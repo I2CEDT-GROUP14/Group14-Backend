@@ -16,10 +16,10 @@ app.use(cors());
 app.use("/status", statusRoute);
 app.use("/quiz", quizRoute);
 
-app.use("/" , (req, res) => {
-    res.sendFile('static/bonk.jpg', { root: process.cwd() }, (err) => {
-        if (err) res.status(err.status || 500).end();
-    });
-});
+// app.use("/" , (req, res) => {
+//     res.sendFile('static/bonk.jpg', { root: process.cwd() }, (err) => {
+//         if (err) res.status(err.status || 500).end();
+//     });
+// });
 
 export default app;

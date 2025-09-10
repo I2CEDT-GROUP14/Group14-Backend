@@ -30,9 +30,23 @@ export const getQuizById = async (req, res) => {
 }
 
 export const generateQuiz = async (req, res) => {
-    const { topic, numQuestions } = req.body;
+    const { topic, numQuestions, questionType } = req.body;
 
-    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. Combine multiple-choice and true/false questions. Always use English.`;
+    if (!topic || !numQuestions || !questionType) {
+        return res.status(400).json({ error: "Please provide topic, numQuestions, and questionType" });
+    }
+
+    let questiontypePrompt;
+
+    if (questionType === 'multiple-choice') {
+        questiontypePrompt = "Each question must be a multiple-choice question with 4 options.";
+    } else if (questionType === 'true-false') {
+        questiontypePrompt = "Each question must be a statement that can be answered with 'True' or 'False', with options 'True' and 'False'.";
+    } else if (questionType === 'mixed') {
+        questiontypePrompt = "Combine multiple-choice and true/false questions.";
+    }
+
+    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English.`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
         method: 'POST',
