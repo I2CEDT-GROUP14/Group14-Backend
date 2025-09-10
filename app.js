@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import statusRoute from "./routes/statusRoute.js";
+import quizRoute from "./routes/quizRoute.js";
 
 const app = express();
 
@@ -10,11 +11,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cors());
 
-app.use("/" , (req, res) => {
-    res.sendFile('static/bonk.jpg', { root: process.cwd() }, (err) => {
-        if (err) res.status(err.status || 500).end();
-    });
-});
+// app.use("/" , (req, res) => {
+//     res.sendFile('static/bonk.jpg', { root: process.cwd() }, (err) => {
+//         if (err) res.status(err.status || 500).end();
+//     });
+// });
 app.use("/status", statusRoute);
+app.use("/quiz", quizRoute);
 
 export default app;
