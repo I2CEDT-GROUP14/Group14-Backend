@@ -3,9 +3,15 @@ import Quiz from '../models/quizModel.js';
 dotenv.config();
 
 export const getAllQuizzes = async (req, res) => {
-    const quizzes = await Quiz.find();
-    // const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions.answer'); // Exclude systemPrompt and __v fields
-    res.status(200).json(quizzes);
+    try {
+        const quizzes = await Quiz.find();
+        // const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions.answer'); // Exclude systemPrompt and __v fields
+        res.status(200).json(quizzes);
+
+    } catch (error) {
+        console.error("Error fetching quizzes:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
 }
 
 export const generateQuiz = async (req, res) => {
