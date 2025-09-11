@@ -7,6 +7,7 @@ const router = express.Router();
 router.get("/", quizController.getAllQuizzes);
 router.get("/:id", quizController.getQuizById);
 router.post("/generate", quizController.generateQuiz);
+router.delete("/:id", quizController.deleteQuizById);
 
 
 export default router;
