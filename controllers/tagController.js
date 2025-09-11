@@ -11,4 +11,22 @@ export const getAllTags = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 }
-export default { getAllTags };
+
+export const createTag = async (req, res) => {
+    try {
+        //check if tag with same name exists
+        const existingTag = await Tag.findOne({ name: req.body.name });
+        if (existingTag) {
+            return res.status(400).json({ error: "Tag with this name already exists" });
+        }
+        const { name } = req.body;
+        const newTag = new Tag({ name });
+        await newTag.save();
+        res.status(201).json(newTag);
+    } catch (error) {
+        console.error("Error creating tag:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
+export default { getAllTags, createTag };

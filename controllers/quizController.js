@@ -51,7 +51,7 @@ export const getQuizById = async (req, res) => {
 }
 
 export const generateQuiz = async (req, res) => {
-    const { topic, numQuestions, questionType } = req.body;
+    const { topic, numQuestions, questionType, tags } = req.body;
 
     if (!topic || !numQuestions || !questionType) {
         return res.status(400).json({ error: "Please provide topic, numQuestions, and questionType" });
@@ -67,7 +67,7 @@ export const generateQuiz = async (req, res) => {
         questiontypePrompt = "Combine multiple-choice and true/false questions.";
     }
 
-    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English. Also, provide tags for the quiz, at least 1 tag must be the question's subject name, e.g. Math, Computer Programming, Algorithms, etc. Maximum 3 tags.`;
+    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English.`;
 
     const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent', {
         method: 'POST',
@@ -101,14 +101,14 @@ export const generateQuiz = async (req, res) => {
                                     propertyOrdering: ["question", "options", "answer"]
                                 }
                             },
-                            tags: { type: "Array", items: { type: "string" } },
+                            // tags: { type: "Array", items: { type: "string" } },
                             // question: { type: "string" },
                             // options: { type: "Array", items: { type: "string" } },
                             // answer: { type: "string" },
                             // tags: { type: "Array", items: { type: "string" } }
                         },
-                        required: ["questions", "tags"],
-                        propertyOrdering: ["questions", "tags"]
+                        // required: ["questions", "tags"],
+                        // propertyOrdering: ["questions", "tags"]
                     },
                 }
             }
@@ -123,23 +123,24 @@ export const generateQuiz = async (req, res) => {
     // console.log(message);
 
 
+
     const newQuiz = new Quiz({
         title: topic,
         questions: message[0].questions,
         systemPrompt,
-        tags: message[0].tags
+        tags: tags || []
     });
 
     await newQuiz.save();
 
     //save tag to database if not exists
-    for (let tagName of message[0].tags) {
-        const existingTag = await Tag.findOne({ name: tagName });
-        if (!existingTag) {
-            const newTag = new Tag({ name: tagName });
-            await newTag.save();
-        }
-    }
+    // for (let tagName of message[0].tags) {
+    //     const existingTag = await Tag.findOne({ name: tagName });
+    //     if (!existingTag) {
+    //         const newTag = new Tag({ name: tagName });
+    //         await newTag.save();
+    //     }
+    // }
 
     //save to database
     // Assuming you have a Quiz model set up with Mongoose
