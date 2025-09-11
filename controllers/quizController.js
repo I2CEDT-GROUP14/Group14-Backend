@@ -1,9 +1,30 @@
 import dotenv from 'dotenv';
 import Quiz from '../models/quizModel.js';
+import Tag from '../models/tagModel.js';
 dotenv.config();
 // import '../db/db.js';
 
 export const getAllQuizzes = async (req, res) => {
+    //check if there is a query parameter for comma separated tags
+    //if yes, filter quizzes by tags
+    //else return all quizzes
+    //why isnt the + in the url working???
+    
+    const tagFilter = req.query.tags;
+    console.log(tagFilter);
+    if (tagFilter) {
+        try {
+            const tags = tagFilter.split(",").map(tag => tag.trim());
+            console.log(tags)
+            //return quizzes that have all of the tags
+            const quizzes = await Quiz.find({ tags: { $all: tags } });
+            // const quizzes = await Quiz.find({ tags: { $in: tags } });
+            return res.status(200).json(quizzes);
+        } catch (error) {
+            console.error("Error fetching quizzes by tag:", error);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+    }
     try {
         const quizzes = await Quiz.find();
         // const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions.answer'); // Exclude systemPrompt and __v fields
@@ -48,7 +69,7 @@ export const generateQuiz = async (req, res) => {
 
     const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English. Also, provide tags for the quiz, at least 1 tag must be the question's subject name, e.g. Math, Computer Programming, Algorithms, etc. Maximum 3 tags.`;
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent', {
         method: 'POST',
         headers: {
             contentType: 'application/json',
@@ -96,19 +117,30 @@ export const generateQuiz = async (req, res) => {
 
     const geminiData = await geminiResponse.json();
     let message = geminiData.candidates[0].content.parts[0].text;
-    console.log("Generated Quiz:", message);
+    console.log(message);
     //escape quotes in message
     message = JSON.parse(message);
+    // console.log(message);
 
 
     const newQuiz = new Quiz({
         title: topic,
-        questions: message.questions,
+        questions: message[0].questions,
         systemPrompt,
-        tags: message.tags
+        tags: message[0].tags
     });
 
     await newQuiz.save();
+
+    //save tag to database if not exists
+    for (let tagName of message[0].tags) {
+        const existingTag = await Tag.findOne({ name: tagName });
+        if (!existingTag) {
+            const newTag = new Tag({ name: tagName });
+            await newTag.save();
+        }
+    }
+
     //save to database
     // Assuming you have a Quiz model set up with Mongoose
     // const newQuiz = new Quiz({
