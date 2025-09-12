@@ -21,13 +21,26 @@ const quizSchema = new mongoose.Schema({
                 answer: { type: String, required: true },
             }
     ],
-    // originalPrompt: {
-    //     type: String,
-    //     required: true,
-    // },
+    choiceType: {
+        type: String,
+        enum: ['multiple-choice', 'true-false', 'mixed'],
+        required: true
+    },
+    originalPrompt: {
+        type: String,
+        required: true,
+    },
     systemPrompt: {
         type: String,
         required: true,
+    },
+    duration: {
+        type: Number,
+        default: 0, // duration in minutes, 0 means no time limit
+    },
+    questionCount: {
+        type: Number,
+        default: 0,
     },
     tags: {
         type: [String],
