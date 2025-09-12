@@ -5,6 +5,8 @@ import Quiz from '../models/quizModel.js';
 import getMainPrompt from '../lib/getPrompt.js';
 import createQuiz from '../lib/generateQuiz.js';
 
+import { validateQuizCreationData } from '../lib/validateData.js';
+
 dotenv.config();
 
 export const getAllQuizzes = async (req, res) => {
@@ -54,14 +56,21 @@ export const getQuizById = async (req, res) => {
 export const generateQuiz = async (req, res) => {
     const { topic, duration, numQuestions, questionType, tags } = req.body;
 
-    if (!topic || !numQuestions || !questionType) {
-        return res.status(400).json({ error: "Please provide topic, numQuestions, and questionType" });
+    //validate data
+    const validationError = validateQuizCreationData(topic, duration, numQuestions, questionType);
+    if (!validationError) {
+        return res.status(400).json({ error: validationError });
     }
 
     const systemPrompt = await getMainPrompt(topic, numQuestions, questionType);
     console.log("Get SysPrompt", systemPrompt);
-    const message = await createQuiz(systemPrompt);
-    console.log(message);
+    const createQuizResponse = await createQuiz(systemPrompt);
+    console.log(createQuizResponse);
+    console.log("Create Quiz Response", createQuizResponse.success);
+    if (!createQuizResponse.success) {
+        return res.status(400).json({ error: createQuizResponse.error });
+    }
+    const message = createQuizResponse.data;
 
     const newQuiz = new Quiz({
         title: topic,
@@ -81,7 +90,7 @@ export const generateQuiz = async (req, res) => {
 
 export const updateQuizById = async (req, res) => {
     const { id } = req.params;
-    const { topic, duration, numQuestions, questionType, regenerateQuiz, tags } = req.body;
+    const { topic, duration, numQuestions, questionType, regenerateQuiz = true, tags } = req.body;
 
     try {
         const quiz = await Quiz.findById(id);
@@ -95,7 +104,15 @@ export const updateQuizById = async (req, res) => {
         if (regenerateQuiz) {
             const systemPrompt = getMainPrompt(topic, numQuestions, questionType);
             const message = await createQuiz(systemPrompt);
-            quiz.questions = message[0].questions;
+            if (!message.success) {
+                return res.status(400).json({ error: message.error });
+            }
+            quiz.systemPrompt = systemPrompt;
+            quiz.originalPrompt = topic + ", " + numQuestions + ", " + questionType;
+            quiz.questions = message.data.questions;
+            quiz.choiceType = questionType;
+            quiz.score = 0; // Reset score when regenerating quiz
+            // quiz.userAnswer = []; // Clear previous answers when regenerating quiz
         }
         if (tags) quiz.tags = tags;
         await quiz.save();

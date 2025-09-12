@@ -25,7 +25,7 @@ const quizSchema = new mongoose.Schema({
     ],
     choiceType: {
         type: String,
-        enum: ['multiple-choice', 'true-false', 'mixed'],
+        enum: ['multiple-choice', 'true-false'],
         required: true
     },
     originalPrompt: {
