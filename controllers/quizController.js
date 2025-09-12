@@ -38,6 +38,12 @@ export const getQuizById = async (req, res) => {
         if (!quiz) {
             return res.status(404).json({ error: "Quiz not found" });
         }
+
+        quiz.originalPrompt = undefined;
+        quiz.systemPrompt = undefined;
+        for (let q of quiz.questions) {
+            q.answer = undefined;            
+        }
         res.status(200).json(quiz);
     } catch (error) {
         console.error("Error fetching quiz by ID:", error);
@@ -114,4 +120,42 @@ export const deleteQuizById = async (req, res) => {
     }
 }
 
-export default { getAllQuizzes, getQuizById, generateQuiz, deleteQuizById };
+export const submitQuizAnswers = async (req, res) => {
+    const { id } = req.params;
+    const { answers } = req.body; // answers should be an array of { questionId, userAnswer }
+    try {
+        const quiz = await Quiz.findById(id);
+        if (!quiz) {
+            return res.status(404).json({ error: "Quiz not found" });
+        }
+        let score = 0;
+        quiz.questions.forEach((question, index) => {
+            const userAnswerObj = answers.find(ans => ans.questionId === question._id.toString());
+            if (userAnswerObj) {
+                question.userAnswer = userAnswerObj.userAnswer;
+                if (question.answer === userAnswerObj.userAnswer) {
+                    question.isAnswerCorrect = true;
+                    score += 1;
+                } else {
+                    question.isAnswerCorrect = false;
+                }
+            }
+        });
+        quiz.score = score;
+        const savedQuiz = await quiz.save();
+
+        for (let q of savedQuiz.questions) {
+            q.answer = undefined;            
+        }
+
+        savedQuiz.originalPrompt = undefined;
+        savedQuiz.systemPrompt = undefined;
+
+        res.status(200).json(savedQuiz);
+    } catch (error) {
+        console.error("Error submitting quiz answers:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
+export default { getAllQuizzes, getQuizById, generateQuiz, deleteQuizById, submitQuizAnswers };

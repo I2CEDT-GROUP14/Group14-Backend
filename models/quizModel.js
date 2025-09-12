@@ -19,6 +19,8 @@ const quizSchema = new mongoose.Schema({
                 question: { type: String, required: true },
                 options: { type: [String], required: true },
                 answer: { type: String, required: true },
+                userAnswer: { type: String, default: "" },
+                isAnswerCorrect: { type: Boolean, default: false }
             }
     ],
     choiceType: {
@@ -46,6 +48,10 @@ const quizSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    score: {
+        type: Number,
+        default: 0,
+    }
 }, { timestamps: true });
 
 const Quiz = mongoose.model("Quiz", quizSchema);
