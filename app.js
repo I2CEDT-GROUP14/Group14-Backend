@@ -25,9 +25,11 @@ app.use("/" , (req, res) => {
     //     if (err) res.status(err.status || 500).end();
     // });
     // res.send("Welcome to Quiz API");
-    res.sendFile('static/1.jpg', { root: process.cwd() }, (err) => {
-        if (err) res.status(err.status || 500).end();
-    });
+    // res.sendFile('static/1.jpg', { root: process.cwd() }, (err) => {
+    //     if (err) res.status(err.status || 500).end();
+    // });
+    //send base64 encoded image
+    res.send("(╯‵□′)╯︵┻━┻");
 });
 
 export default app;
