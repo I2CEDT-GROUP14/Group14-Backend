@@ -72,10 +72,12 @@ export const generateQuiz = async (req, res) => {
     }
     const message = createQuizResponse.data;
 
+    console.log("Create Quiz Message", message);
+
     const newQuiz = new Quiz({
         title: title,
         description: description,
-        questions: message[0].questions,
+        questions: message.questions,
         originalPrompt: description + ", " + numQuestions + ", " + questionType,
         choiceType: questionType,
         systemPrompt,
