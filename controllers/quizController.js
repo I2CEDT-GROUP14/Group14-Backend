@@ -54,15 +54,15 @@ export const getQuizById = async (req, res) => {
 }
 
 export const generateQuiz = async (req, res) => {
-    const { topic, duration, numQuestions, questionType, tags } = req.body;
+    const { title, description, duration, numQuestions, questionType, tags } = req.body;
 
     //validate data
-    const validationError = validateQuizCreationData(topic, duration, numQuestions, questionType);
+    const validationError = validateQuizCreationData(description, duration, numQuestions, questionType);
     if (!validationError) {
         return res.status(400).json({ error: validationError });
     }
 
-    const systemPrompt = await getMainPrompt(topic, numQuestions, questionType);
+    const systemPrompt = await getMainPrompt(description, numQuestions, questionType);
     console.log("Get SysPrompt", systemPrompt);
     const createQuizResponse = await createQuiz(systemPrompt);
     console.log(createQuizResponse);
@@ -73,9 +73,10 @@ export const generateQuiz = async (req, res) => {
     const message = createQuizResponse.data;
 
     const newQuiz = new Quiz({
-        title: topic,
+        title: title,
+        description: description,
         questions: message[0].questions,
-        originalPrompt: topic + ", " + numQuestions + ", " + questionType,
+        originalPrompt: description + ", " + numQuestions + ", " + questionType,
         choiceType: questionType,
         systemPrompt,
         duration: duration,
@@ -90,25 +91,26 @@ export const generateQuiz = async (req, res) => {
 
 export const updateQuizById = async (req, res) => {
     const { id } = req.params;
-    const { topic, duration, numQuestions, questionType, regenerateQuiz = true, tags } = req.body;
+    const { title, description, duration, numQuestions, questionType, regenerateQuiz = true, tags } = req.body;
 
     try {
         const quiz = await Quiz.findById(id);
         if (!quiz) {
             return res.status(404).json({ error: "Quiz not found" });
         }
-        if (topic) quiz.title = topic;
+        if (title) quiz.title = title;
+        if (description) quiz.description = description;
         if (duration !== undefined) quiz.duration = duration;
         if (numQuestions !== undefined) quiz.questionCount = numQuestions;
         if (questionType) quiz.questionType = questionType;
         if (regenerateQuiz) {
-            const systemPrompt = getMainPrompt(topic, numQuestions, questionType);
+            const systemPrompt = getMainPrompt(description, numQuestions, questionType);
             const message = await createQuiz(systemPrompt);
             if (!message.success) {
                 return res.status(400).json({ error: message.error });
             }
             quiz.systemPrompt = systemPrompt;
-            quiz.originalPrompt = topic + ", " + numQuestions + ", " + questionType;
+            quiz.originalPrompt = description + ", " + numQuestions + ", " + questionType;
             quiz.questions = message.data.questions;
             quiz.choiceType = questionType;
             quiz.score = 0; // Reset score when regenerating quiz
