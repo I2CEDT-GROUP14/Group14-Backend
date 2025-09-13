@@ -70,6 +70,13 @@ export const generateQuiz = async (req, res) => {
     if (!createQuizResponse.success) {
         return res.status(400).json({ error: createQuizResponse.error });
     }
+
+    //check if gemini returned an error
+    if (createQuizResponse.error) {
+        console.error("Gemini API error:", createQuizResponse.error);
+        return res.status(400).json({ error: createQuizResponse.error });
+    }
+    
     const message = createQuizResponse.data;
 
     console.log("Create Quiz Message", message);
