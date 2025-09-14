@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get("/", tagController.getAllTags);
 router.post("/create", tagController.createTag);
+router.delete("/:id", tagController.deleteTag);
 // router.get("/:id", quizController.getQuizById);
 // router.post("/generate", quizController.generateQuiz);
 

@@ -30,17 +30,20 @@ export const createTag = async (req, res) => {
 }
 
 export const deleteTag = async (req, res) => {
-    const { id } = req.params;
+    let { id } = req.params;
+    console.log(id)
+    id = id.trim();
+    console.log(id)
     try {
         const deletedTag = await Tag.findByIdAndDelete(id);
         if (!deletedTag) {
             return res.status(404).json({ error: "Tag not found" });
         }
-        res.status(200).json({ message: "Tag deleted successfully" });
+        res.status(200).json({ success: true, message: "Tag deleted successfully" });
     } catch (error) {
         console.error("Error deleting tag:", error);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 }
 
-export default { getAllTags, createTag };
+export default { getAllTags, createTag, deleteTag };
