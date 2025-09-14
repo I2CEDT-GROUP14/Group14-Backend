@@ -1,12 +1,30 @@
 import dotenv from 'dotenv';
+
 import Quiz from '../models/quizModel.js';
+
+import getMainPrompt from '../lib/getPrompt.js';
+import createQuiz from '../lib/generateQuiz.js';
+
+import { validateQuizCreationData } from '../lib/validateData.js';
+
 dotenv.config();
-// import '../db/db.js';
 
 export const getAllQuizzes = async (req, res) => {
+    const tagFilter = req.query.tags;
+    console.log(tagFilter);
+    if (tagFilter) {
+        try {
+            const tags = tagFilter.split(",").map(tag => tag.trim());
+            console.log(tags)
+            const quizzes = await Quiz.find({ tags: { $all: tags } });
+            return res.status(200).json(quizzes);
+        } catch (error) {
+            console.error("Error fetching quizzes by tag:", error);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+    }
     try {
-        const quizzes = await Quiz.find();
-        // const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions.answer'); // Exclude systemPrompt and __v fields
+        const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions').sort({ createdAt: -1 }); // Exclude systemPrompt, __v, and questions fields and sort by creation date (newest first)
         res.status(200).json(quizzes);
 
     } catch (error) {
@@ -22,6 +40,12 @@ export const getQuizById = async (req, res) => {
         if (!quiz) {
             return res.status(404).json({ error: "Quiz not found" });
         }
+
+        quiz.originalPrompt = undefined;
+        quiz.systemPrompt = undefined;
+        for (let q of quiz.questions) {
+            q.answer = undefined;            
+        }
         res.status(200).json(quiz);
     } catch (error) {
         console.error("Error fetching quiz by ID:", error);
@@ -30,96 +54,136 @@ export const getQuizById = async (req, res) => {
 }
 
 export const generateQuiz = async (req, res) => {
-    const { topic, numQuestions, questionType } = req.body;
+    const { title, description, duration, numQuestions, questionType, tags } = req.body;
 
-    if (!topic || !numQuestions || !questionType) {
-        return res.status(400).json({ error: "Please provide topic, numQuestions, and questionType" });
+    //validate data
+    const validationError = validateQuizCreationData(description, duration, numQuestions, questionType);
+    if (!validationError) {
+        return res.status(400).json({ error: validationError });
     }
 
-    let questiontypePrompt;
-
-    if (questionType === 'multiple-choice') {
-        questiontypePrompt = "Each question must be a multiple-choice question with 4 options.";
-    } else if (questionType === 'true-false') {
-        questiontypePrompt = "Each question must be a statement that can be answered with 'True' or 'False', with options 'True' and 'False'.";
-    } else if (questionType === 'mixed') {
-        questiontypePrompt = "Combine multiple-choice and true/false questions.";
+    const systemPrompt = await getMainPrompt(description, numQuestions, questionType);
+    console.log("Get SysPrompt", systemPrompt);
+    const createQuizResponse = await createQuiz(systemPrompt);
+    console.log(createQuizResponse);
+    console.log("Create Quiz Response", createQuizResponse.success);
+    if (!createQuizResponse.success) {
+        return res.status(400).json({ error: createQuizResponse.error });
     }
 
-    const systemPrompt = `Generate a quiz on the topic of "${topic}" with ${numQuestions} questions. ${questiontypePrompt} Always use English. Also, provide tags for the quiz, at least 1 tag must be the question's subject name, e.g. Math, Computer Programming, Algorithms, etc. Maximum 3 tags.`;
+    //check if gemini returned an error
+    if (createQuizResponse.error) {
+        console.error("Gemini API error:", createQuizResponse.error);
+        return res.status(400).json({ error: createQuizResponse.error });
+    }
+    
+    const message = createQuizResponse.data;
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-        method: 'POST',
-        headers: {
-            contentType: 'application/json',
-            'x-goog-api-key': process.env.GEMINI_API_KEY
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{
-                    text: systemPrompt
-                }]
-            }],
-            generationConfig: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: "Array",
-                    items: {
-                        type: "OBJECT",
-                        properties: {
-                            questions: {
-                                type: "Array",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        question: { type: "string" },
-                                        options: { type: "Array", items: { type: "string" } },
-                                        answer: { type: "string" },
-                                    },
-                                    required: ["question", "options", "answer"],
-                                    propertyOrdering: ["question", "options", "answer"]
-                                }
-                            },
-                            tags: { type: "Array", items: { type: "string" } },
-                            // question: { type: "string" },
-                            // options: { type: "Array", items: { type: "string" } },
-                            // answer: { type: "string" },
-                            // tags: { type: "Array", items: { type: "string" } }
-                        },
-                        required: ["questions", "tags"],
-                        propertyOrdering: ["questions", "tags"]
-                    },
-                }
-            }
-        })
-    });
-
-    const geminiData = await geminiResponse.json();
-    let message = geminiData.candidates[0].content.parts[0].text;
-    console.log("Generated Quiz:", message);
-    //escape quotes in message
-    message = JSON.parse(message);
-
+    console.log("Create Quiz Message", message);
 
     const newQuiz = new Quiz({
-        title: topic,
+        title: title,
+        description: description,
         questions: message.questions,
+        originalPrompt: description + ", " + numQuestions + ", " + questionType,
+        choiceType: questionType,
         systemPrompt,
-        tags: message.tags
+        duration: duration,
+        questionCount: numQuestions,
+        tags: tags || []
     });
 
     await newQuiz.save();
-    //save to database
-    // Assuming you have a Quiz model set up with Mongoose
-    // const newQuiz = new Quiz({
-    //     title: topic,
-    //     numQuestions,
-    //     questions: message,
-    //     systemPrompt
-    // });
-    // await newQuiz.save();
 
     res.status(200).json(message);
 }
 
-export default { generateQuiz };
+export const updateQuizById = async (req, res) => {
+    const { id } = req.params;
+    const { title, description, duration, numQuestions, questionType, regenerateQuiz = true, tags } = req.body;
+
+    try {
+        const quiz = await Quiz.findById(id);
+        if (!quiz) {
+            return res.status(404).json({ error: "Quiz not found" });
+        }
+        if (title) quiz.title = title;
+        if (description) quiz.description = description;
+        if (duration !== undefined) quiz.duration = duration;
+        if (numQuestions !== undefined) quiz.questionCount = numQuestions;
+        if (questionType) quiz.questionType = questionType;
+        if (regenerateQuiz) {
+            const systemPrompt = getMainPrompt(description, numQuestions, questionType);
+            const message = await createQuiz(systemPrompt);
+            if (!message.success) {
+                return res.status(400).json({ error: message.error });
+            }
+            quiz.systemPrompt = systemPrompt;
+            quiz.originalPrompt = description + ", " + numQuestions + ", " + questionType;
+            quiz.questions = message.data.questions;
+            quiz.choiceType = questionType;
+            quiz.score = 0; // Reset score when regenerating quiz
+            // quiz.userAnswer = []; // Clear previous answers when regenerating quiz
+        }
+        if (tags) quiz.tags = tags;
+        await quiz.save();
+        res.status(200).json(quiz);
+    } catch (error) {
+        console.error("Error updating quiz by ID:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
+export const deleteQuizById = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const quiz = await Quiz.findByIdAndDelete(id);
+        if (!quiz) {
+            return res.status(404).json({ error: "Quiz not found" });
+        }
+        res.status(200).json({ message: "Quiz deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting quiz by ID:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
+export const submitQuizAnswers = async (req, res) => {
+    const { id } = req.params;
+    const { answers } = req.body; // answers should be an array of { questionId, userAnswer }
+    try {
+        const quiz = await Quiz.findById(id);
+        if (!quiz) {
+            return res.status(404).json({ error: "Quiz not found" });
+        }
+        let score = 0;
+        quiz.questions.forEach((question, index) => {
+            const userAnswerObj = answers.find(ans => ans.questionId === question._id.toString());
+            if (userAnswerObj) {
+                question.userAnswer = userAnswerObj.userAnswer;
+                if (question.answer === userAnswerObj.userAnswer) {
+                    question.isAnswerCorrect = true;
+                    score += 1;
+                } else {
+                    question.isAnswerCorrect = false;
+                }
+            }
+        });
+        quiz.score = score;
+        const savedQuiz = await quiz.save();
+
+        for (let q of savedQuiz.questions) {
+            q.answer = undefined;            
+        }
+
+        savedQuiz.originalPrompt = undefined;
+        savedQuiz.systemPrompt = undefined;
+
+        res.status(200).json(savedQuiz);
+    } catch (error) {
+        console.error("Error submitting quiz answers:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
+export default { getAllQuizzes, getQuizById, generateQuiz, deleteQuizById, submitQuizAnswers };
