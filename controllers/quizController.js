@@ -24,7 +24,7 @@ export const getAllQuizzes = async (req, res) => {
         }
     }
     try {
-        const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions').sort({ createdAt: -1 }); // Exclude systemPrompt, __v, and questions fields and sort by creation date (newest first)
+        const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions').sort({ updatedAt: -1 }); // Exclude systemPrompt, __v, and questions fields and sort by creation date (newest first)
         res.status(200).json(quizzes);
 
     } catch (error) {
