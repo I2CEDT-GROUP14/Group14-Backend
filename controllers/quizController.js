@@ -24,7 +24,47 @@ export const getAllQuizzes = async (req, res) => {
         }
     }
     try {
-        const quizzes = await Quiz.find({}, '-systemPrompt -__v -questions').sort({ updatedAt: -1 }); // Exclude systemPrompt, __v, and questions fields and sort by creation date (newest first)
+        let quizzes = await Quiz.find({}, '-systemPrompt -__v -questions').sort({ updatedAt: -1 }); // Exclude systemPrompt, __v, and questions fields and sort by creation date (newest first)
+        //escape special characters in the title and tags
+        quizzes.forEach(quiz => {
+            quiz.title = quiz.title
+                .replace(/[\\\"\'\n\r\t\b\f]/g, match => {
+                    switch (match) {
+                        case '\\': return '\\\\';
+                        case '"': return '\\"';
+                        case "'": return "\\'";
+                        case '\n': return '\\n';
+                        case '\r': return '\\r';
+                        case '\t': return '\\t';
+                        case '\b': return '\\b';
+                        case '\f': return '\\f';
+                        default: return match;
+                    }
+                })
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        });
+        //escape special characters in the tags
+        quizzes.forEach(quiz => {
+            if (Array.isArray(quiz.tags)) {
+                quiz.tags = quiz.tags.map(tag => tag
+                    .replace(/[\\\"\'\n\r\t\b\f]/g, match => {
+                        switch (match) {
+                            case '\\': return '\\\\';
+                            case '"': return '\\"';
+                            case "'": return "\\'";
+                            case '\n': return '\\n';
+                            case '\r': return '\\r';
+                            case '\t': return '\\t';
+                            case '\b': return '\\b';
+                            case '\f': return '\\f';
+                            default: return match;
+                        }
+                    })
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;'));
+            }
+        });
         res.status(200).json(quizzes);
 
     } catch (error) {
