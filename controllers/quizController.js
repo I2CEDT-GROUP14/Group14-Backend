@@ -43,30 +43,6 @@ export const getQuizById = async (req, res) => {
 
         quiz.originalPrompt = undefined;
         quiz.systemPrompt = undefined;
-        // for (let q of quiz.questions) {
-        //     q.answer = undefined;
-        //     // Escape special characters in options
-        //     if (Array.isArray(q.options)) {
-        //         q.options = q.options.map(opt =>
-        //             opt
-        //                 .replace(/[\\\"\'\n\r\t\b\f]/g, match => {
-        //                     switch (match) {
-        //                         case '\\': return '\\\\';
-        //                         case '"': return '\\"';
-        //                         case "'": return "\\'";
-        //                         case '\n': return '\\n';
-        //                         case '\r': return '\\r';
-        //                         case '\t': return '\\t';
-        //                         case '\b': return '\\b';
-        //                         case '\f': return '\\f';
-        //                         default: return match;
-        //                     }
-        //                 })
-        //                 .replace(/</g, '&lt;')
-        //                 .replace(/>/g, '&gt;')
-        //         );
-        //     }
-        // }
         res.status(200).json(quiz);
     } catch (error) {
         console.error("Error fetching quiz by ID:", error);
@@ -97,7 +73,42 @@ export const generateQuiz = async (req, res) => {
         console.error("Gemini API error:", createQuizResponse.error);
         return res.status(400).json({ error: createQuizResponse.error });
     }
-    
+
+    //escape special characters in the title and tags
+    title = title
+        .replace(/[\\\"\'\n\r\t\b\f]/g, match => {
+            switch (match) {
+                case '\\': return '\\\\';
+                case '"': return '\\"';
+                case "'": return "\\'";
+                case '\n': return '\\n';
+                case '\r': return '\\r';
+                case '\t': return '\\t';
+                case '\b': return '\\b';
+                case '\f': return '\\f';
+                default: return match;
+            }
+        })
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    if (Array.isArray(tags)) {
+        tags = tags.map(tag => tag
+            .replace(/[\\\"\'\n\r\t\b\f]/g, match => {
+                switch (match) {
+                    case '\\': return '\\\\';
+                    case '"': return '\\"';
+                    case "'": return "\\'";
+                    case '\n': return '\\n';
+                    case '\r': return '\\r';
+                    case '\t': return '\\t';
+                    case '\b': return '\\b';
+                    case '\f': return '\\f';
+                    default: return match;
+                }
+            })
+        );
+    }
+
     const message = createQuizResponse.data;
 
     console.log("Create Quiz Message", message);
