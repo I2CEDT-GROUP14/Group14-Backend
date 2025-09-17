@@ -91,7 +91,7 @@ export const getQuizById = async (req, res) => {
 }
 
 export const generateQuiz = async (req, res) => {
-    const { title, description, duration, numQuestions, questionType, tags } = req.body;
+    let { title, description, duration, numQuestions, questionType, tags } = req.body;
 
     //validate data
     const validationError = validateQuizCreationData(description, duration, numQuestions, questionType);
