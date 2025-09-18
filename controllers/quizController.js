@@ -76,10 +76,16 @@ export const getAllQuizzes = async (req, res) => {
 export const getQuizById = async (req, res) => {
     const { id } = req.params;
     try {
-        const quiz = await Quiz.findById(id);
+        const quiz = await Quiz.findById(id, '-systemPrompt -__v'); // Exclude systemPrompt and __v fields
+
         if (!quiz) {
             return res.status(404).json({ error: "Quiz not found" });
         }
+
+        //remove answer field from each question
+        quiz.questions.forEach(q => {
+            q.answer = undefined;
+        });
 
         quiz.originalPrompt = undefined;
         quiz.systemPrompt = undefined;
