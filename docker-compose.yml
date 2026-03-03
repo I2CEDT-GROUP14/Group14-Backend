@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    image: ghcr.io/i2cedt-group14/group14-backend:latest
     restart: unless-stopped
     ports:
       - "5000:5000"
